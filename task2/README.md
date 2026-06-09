@@ -1,40 +1,29 @@
 Описание структуры проекта
 
 Расположение модулей и их назначение
-
-task3/
+task2/
 │
-├── main.py Главный модуль, консольный интерфейс пользователя
-├── database.py Ядро БД: классы Database и Table (in-memory)
-├── models.py Модели данных (Student)
-├── errors.py Пользовательские исключения
-├── validators.py Функции валидации данных
-├── requirements.txt Зависимости для тестирования
-├── README.md Документация проекта
-│
-└── tests/ Автоматические тесты
-├── init.py
-├── test_database.py Тесты для Table и Database
-├── test_models.py Тесты для модели Student
-├── test_validators.py Тесты для валидации
-└── test_errors.py Тесты для исключений
+├── main.py # Главный модуль, консольный интерфейс пользователя
+├── database.py # Ядро БД: классы Database и Table (in-memory)
+├── models.py # Модели данных (Student)
+├── errors.py # Пользовательские исключения
+├── validators.py # Функции валидации данных
+└── README.md # Документация проекта
 
 
 Назначение модулей
 
-- main.py: Содержит класс `DatabaseCLI` — консольный интерфейс пользователя. Обрабатывает ввод команд, вызывает методы БД, выводит результаты. Реализует управление текущей таблицей, парсинг аргументов, фильтров и команд сортировки.
+- main.py: Содержит класс `DatabaseCLI` — консольный интерфейс пользователя. Обрабатывает ввод команд, вызывает методы БД, выводит результаты. Реализует управление текущей таблицей, парсинг аргументов и фильтров.
 
 - database.py: Содержит два основных класса:
   - `Table` — представляет отдельную таблицу, хранит записи в `dict`, управляет идентификаторами. Реализует операции `insert`, `get_by_id`, `filter`, `get_all`, `update`, `delete`, `sort`, `count`, `clear`.
   - `Database` — управляет несколькими таблицами, позволяет создавать, удалять, переключаться между таблицами. Содержит предопределенные схемы таблиц (`students`, `books`, `employees`).
 
-- models.py: Определяет dataclass `Student` с полями: id, name, age, major, enrolled_at. Содержит методы `to_dict()` и `from_dict()`.
+- models.py: Определяет dataclass `Student` с полями: id, name, age, major, enrolled_at. Содержит методы `to_dict()` для сериализации и `from_dict()` для десериализации.
 
-- errors.py: Кастомные исключения: `DatabaseError`, `RecordNotFoundError`, `ValidationError`.
+- errors.py: Кастомные исключения: `DatabaseError` (базовое), `RecordNotFoundError` (запись не найдена), `ValidationError` (ошибка валидации данных).
 
 - validators.py: Функция `validate_student_data` для проверки имени, возраста, специальности.
-
-- tests/: Модульные тесты с покрытием >80% (35+ тестов).
 
 Описание реализованной функциональности
 
@@ -82,16 +71,11 @@ CRUD операции
 | `books` | title (str), author (str), year (int), isbn (str) |
 | `employees` | full_name (str), position (str), salary (float), department (str) |
 
-Автоматизированные тесты
+Обработка ошибок
 
-Покрытие: >80% (35+ тестов)
-
-| Файл | Количество тестов | Что проверяет |
-|------|------------------|---------------|
-| `test_database.py` | 25+ | insert, get, filter, update, delete, sort, count, clear |
-| `test_models.py` | 4 | Student: создание, to_dict, from_dict |
-| `test_validators.py` | 10 | Валидация имени, возраста, специальности |
-| `test_errors.py` | 3 | Иерархия исключений |
+- `ValidationError` — неверные данные (пустые поля, неверный тип)
+- `RecordNotFoundError` — запись не найдена
+- `DatabaseError` — ошибки БД (таблица не существует)
 
 Инструкция по запуску
 
@@ -100,18 +84,5 @@ CRUD операции
 
 Запуск приложения
 
-cd task3
+cd task2
 python main.py
-
-
-
-Запуск тестов
-
-Установка зависимостей
-pip install pytest pytest-cov
-
-Запуск всех тестов
-python -m unittest discover tests -v
-
-С отчетом о покрытии
-pytest tests/ --cov=. --cov-report=term
