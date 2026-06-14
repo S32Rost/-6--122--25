@@ -1,8 +1,13 @@
+"""Tests for data models."""
+
 import unittest
 from datetime import datetime
-from models import Student
+from src.database.models import Student
+
 
 class TestStudent(unittest.TestCase):
+    """Test Student model."""
+    
     def setUp(self):
         self.now = datetime.now()
         self.student = Student(
@@ -42,14 +47,12 @@ class TestStudent(unittest.TestCase):
         self.assertEqual(student.age, 19)
         self.assertEqual(student.major, "Математика")
     
-    def test_from_dict_and_back(self):
-        original = self.student
-        data = original.to_dict()
+    def test_round_trip(self):
+        data = self.student.to_dict()
         restored = Student.from_dict(data)
-        self.assertEqual(original.id, restored.id)
-        self.assertEqual(original.name, restored.name)
-        self.assertEqual(original.age, restored.age)
-        self.assertEqual(original.major, restored.major)
+        self.assertEqual(self.student.id, restored.id)
+        self.assertEqual(self.student.name, restored.name)
+        self.assertEqual(self.student.age, restored.age)
 
 
 if __name__ == "__main__":

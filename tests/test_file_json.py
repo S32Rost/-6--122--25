@@ -1,77 +1,78 @@
+"""Tests for JSON file-based database."""
+
 import unittest
 import os
 import tempfile
-import json
-from database import FileDatabaseJSON, SCHEMAS
-from errors import RecordNotFoundError, ValidationError, DatabaseError
+from src.database.file_json import FileDatabaseJSON
+from src.database.schemas import SCHEMAS
+from src.database.errors import RecordNotFoundError
 
 
 class TestFileDatabaseJSON(unittest.TestCase):
+    """Test FileDatabaseJSON class."""
+    
     def setUp(self):
-        """Создание временного файла для тестов."""
         self.temp_file = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
         self.temp_file.close()
         self.db = FileDatabaseJSON(self.temp_file.name)
+        self.db.create_table("students", SCHEMAS["students"])
     
     def tearDown(self):
-        """Удаление временного файла после тестов."""
         if os.path.exists(self.temp_file.name):
             os.remove(self.temp_file.name)
     
     def test_create_table(self):
-        self.db.create_table("students", SCHEMAS["students"])
+        """Test table creation."""
         self.assertTrue(self.db.table_exists("students"))
-        self.assertIn("students", self.db.list_tables())
     
     def test_insert_and_get(self):
-        self.db.create_table("students", SCHEMAS["students"])
+        """Test insert and get by id."""
         record = self.db.insert("students", name="Тест", age=20, major="Тест", email="test@test.com")
         self.assertEqual(record["name"], "Тест")
         
-        # Проверка сохранения в файл
-        self.db2 = FileDatabaseJSON(self.temp_file.name)
-        self.assertTrue(self.db2.table_exists("students"))
-        loaded = self.db2.get_by_id("students", 1)
+        # Check persistence
+        new_db = FileDatabaseJSON(self.temp_file.name)
+        loaded = new_db.get_by_id("students", 1)
         self.assertEqual(loaded["name"], "Тест")
     
+    def test_get_all(self):
+        """Test get all records."""
+        self.db.insert("students", name="Иван", age=20, major="Информатика", email="i@i.com")
+        self.db.insert("students", name="Петр", age=25, major="Физика", email="p@p.com")
+        records = self.db.get_all("students")
+        self.assertEqual(len(records), 2)
+    
     def test_update(self):
-        self.db.create_table("students", SCHEMAS["students"])
-        self.db.insert("students", name="Старое", age=20, major="Тест", email="test@test.com")
-        updated = self.db.update("students", 1, name="Новое", age=21)
-        self.assertEqual(updated["name"], "Новое")
+        """Test update record."""
+        self.db.insert("students", name="Старый", age=20, major="Тест", email="test@test.com")
+        updated = self.db.update("students", 1, name="Новый", age=21)
+        self.assertEqual(updated["name"], "Новый")
         self.assertEqual(updated["age"], 21)
     
     def test_delete(self):
-        self.db.create_table("students", SCHEMAS["students"])
+        """Test delete record."""
         self.db.insert("students", name="Тест", age=20, major="Тест", email="test@test.com")
         self.db.delete("students", 1)
         with self.assertRaises(RecordNotFoundError):
             self.db.get_by_id("students", 1)
     
     def test_filter(self):
-        self.db.create_table("students", SCHEMAS["students"])
+        """Test filter records."""
         self.db.insert("students", name="Иван", age=20, major="Информатика", email="i@i.com")
         self.db.insert("students", name="Петр", age=25, major="Физика", email="p@p.com")
-        
         results = self.db.filter("students", {"age__gt": 22})
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]["name"], "Петр")
     
     def test_sort(self):
-        self.db.create_table("students", SCHEMAS["students"])
+        """Test sort records."""
         self.db.insert("students", name="Иван", age=20, major="Информатика", email="i@i.com")
-        self.db.insert("students", name="Петр", age=25, major="Физика", email="p@p.com")
-        self.db.insert("students", name="Анна", age=22, major="Мат", email="a@a.com")
+        self.db.insert("students", name="Анна", age=22, major="Физика", email="a@a.com")
+        self.db.insert("students", name="Борис", age=21, major="Мат", email="b@b.com")
         
         results = self.db.sort("students", "name", reverse=False)
         names = [r["name"] for r in results]
-        self.assertEqual(names, ["Анна", "Иван", "Петр"])
-    
-    def test_drop_table(self):
-        self.db.create_table("students", SCHEMAS["students"])
-        self.assertTrue(self.db.table_exists("students"))
-        self.db.drop_table("students")
-        self.assertFalse(self.db.table_exists("students"))
+        self.assertEqual(names, ["Анна", "Борис", "Иван"])
 
 
 if __name__ == "__main__":

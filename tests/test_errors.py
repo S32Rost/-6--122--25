@@ -1,7 +1,12 @@
+"""Tests for custom exceptions."""
+
 import unittest
-from errors import DatabaseError, RecordNotFoundError, ValidationError
+from src.database.errors import DatabaseError, RecordNotFoundError, ValidationError
+
 
 class TestErrors(unittest.TestCase):
+    """Test exception hierarchy."""
+    
     def test_database_error(self):
         error = DatabaseError("Ошибка БД")
         self.assertEqual(str(error), "Ошибка БД")

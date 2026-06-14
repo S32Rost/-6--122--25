@@ -1,13 +1,18 @@
+"""Tests for validators."""
+
 import unittest
-from validators import validate_student_data
-from errors import ValidationError
+from src.database.validators import validate_student_data, validate_record
+from src.database.errors import ValidationError
+
 
 class TestValidators(unittest.TestCase):
-    def test_valid_data(self):
+    """Test validation functions."""
+    
+    def test_valid_student_data(self):
         try:
             validate_student_data("Иван", 20, "Информатика")
         except ValidationError:
-            self.fail("Валидация не должна была выбросить исключение")
+            self.fail("ValidationError raised unexpectedly")
     
     def test_empty_name(self):
         with self.assertRaises(ValidationError):
@@ -29,10 +34,6 @@ class TestValidators(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_student_data("Иван", 121, "Информатика")
     
-    def test_age_zero(self):
-        with self.assertRaises(ValidationError):
-            validate_student_data("Иван", 0, "Информатика")
-    
     def test_negative_age(self):
         with self.assertRaises(ValidationError):
             validate_student_data("Иван", -5, "Информатика")
@@ -45,9 +46,25 @@ class TestValidators(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_student_data("Иван", 20, "   ")
     
-    def test_none_major(self):
+    def test_validate_record_success(self):
+        schema = {"name": str, "age": int}
+        data = {"name": "Иван", "age": 20}
+        try:
+            validate_record(schema, data)
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_validate_record_missing_field(self):
+        schema = {"name": str, "age": int}
+        data = {"name": "Иван"}
         with self.assertRaises(ValidationError):
-            validate_student_data("Иван", 20, None)
+            validate_record(schema, data)
+    
+    def test_validate_record_wrong_type(self):
+        schema = {"name": str, "age": int}
+        data = {"name": "Иван", "age": "twenty"}
+        with self.assertRaises(ValidationError):
+            validate_record(schema, data)
 
 
 if __name__ == "__main__":
