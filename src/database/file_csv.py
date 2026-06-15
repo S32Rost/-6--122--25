@@ -66,16 +66,23 @@ class FileDatabaseCSV(DatabaseInterface):
                 with open(csv_path, 'r', encoding='utf-8', newline='') as f:
                     reader = csv.DictReader(f)
                     for row in reader:
+                        # Конвертация типов
                         if table_name in self._schemas:
                             for field, field_type in self._schemas[table_name].items():
                                 if field in row and row[field]:
-                                    if field_type == int:
-                                        row[field] = int(row[field])
-                                    elif field_type == float:
-                                        row[field] = float(row[field])
+                                    try:
+                                        if field_type == int:
+                                            row[field] = int(row[field])
+                                        elif field_type == float:
+                                            row[field] = float(row[field])
+                                    except (ValueError, TypeError):
+                                        pass
                         self._tables[table_name].append(row)
-                        if int(row.get("id", 0)) > max_id:
-                            max_id = int(row["id"])
+                        try:
+                            if int(row.get("id", 0)) > max_id:
+                                max_id = int(row["id"])
+                        except (ValueError, TypeError):
+                            pass
             except Exception as e:
                 raise DatabaseError(f"Ошибка загрузки CSV {table_name}: {e}")
         
@@ -103,6 +110,7 @@ class FileDatabaseCSV(DatabaseInterface):
                 writer.writerows(self._tables[table_name])
     
     def create_table(self, table_name: str, schema: Dict[str, type]) -> None:
+        """Create a new table."""
         if table_name in self._tables:
             raise DatabaseError(f"Таблица '{table_name}' уже существует")
         self._tables[table_name] = []
@@ -111,10 +119,12 @@ class FileDatabaseCSV(DatabaseInterface):
         self._save_table(table_name)
     
     def insert(self, table_name: str, **kwargs) -> Dict[str, Any]:
+        """Insert a new record."""
         if not self.table_exists(table_name):
             raise DatabaseError(f"Таблица '{table_name}' не существует")
         
-        validate_record(self._schemas[table_name], kwargs)
+        schema = self._schemas.get(table_name, {})
+        validate_record(schema, kwargs)
         
         record_id = self._next_ids[table_name]
         record = {
@@ -130,6 +140,7 @@ class FileDatabaseCSV(DatabaseInterface):
         return record
     
     def get_by_id(self, table_name: str, record_id: int) -> Dict[str, Any]:
+        """Get record by ID."""
         if not self.table_exists(table_name):
             raise DatabaseError(f"Таблица '{table_name}' не существует")
         for record in self._tables[table_name]:
@@ -138,11 +149,13 @@ class FileDatabaseCSV(DatabaseInterface):
         raise RecordNotFoundError(f"Запись id={record_id} не найдена")
     
     def get_all(self, table_name: str) -> List[Dict[str, Any]]:
+        """Get all records."""
         if not self.table_exists(table_name):
             raise DatabaseError(f"Таблица '{table_name}' не существует")
         return self._tables[table_name]
     
     def filter(self, table_name: str, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Filter records."""
         if not self.table_exists(table_name):
             raise DatabaseError(f"Таблица '{table_name}' не существует")
         
@@ -170,6 +183,7 @@ class FileDatabaseCSV(DatabaseInterface):
         return results
     
     def update(self, table_name: str, record_id: int, **updates) -> Dict[str, Any]:
+        """Update a record."""
         if not self.table_exists(table_name):
             raise DatabaseError(f"Таблица '{table_name}' не существует")
         
@@ -189,6 +203,7 @@ class FileDatabaseCSV(DatabaseInterface):
         raise RecordNotFoundError(f"Запись id={record_id} не найдена")
     
     def delete(self, table_name: str, record_id: int) -> None:
+        """Delete a record."""
         if not self.table_exists(table_name):
             raise DatabaseError(f"Таблица '{table_name}' не существует")
         
@@ -201,9 +216,11 @@ class FileDatabaseCSV(DatabaseInterface):
         raise RecordNotFoundError(f"Запись id={record_id} не найдена")
     
     def list_tables(self) -> List[str]:
+        """List all tables."""
         return list(self._tables.keys())
     
     def drop_table(self, table_name: str) -> None:
+        """Drop a table."""
         if not self.table_exists(table_name):
             raise DatabaseError(f"Таблица '{table_name}' не существует")
         
@@ -219,9 +236,11 @@ class FileDatabaseCSV(DatabaseInterface):
             os.remove(schema_path)
     
     def table_exists(self, table_name: str) -> bool:
+        """Check if table exists."""
         return table_name in self._tables
     
     def sort(self, table_name: str, field: str, reverse: bool = False) -> List[Dict[str, Any]]:
+        """Sort records by field."""
         results = self.get_all(table_name)
         
         def get_sort_key(record):
