@@ -66,7 +66,6 @@ class FileDatabaseCSV(DatabaseInterface):
                 with open(csv_path, 'r', encoding='utf-8', newline='') as f:
                     reader = csv.DictReader(f)
                     for row in reader:
-                        # Конвертация типов
                         if table_name in self._schemas:
                             for field, field_type in self._schemas[table_name].items():
                                 if field in row and row[field]:
@@ -93,7 +92,6 @@ class FileDatabaseCSV(DatabaseInterface):
         csv_path = self._get_table_path(table_name)
         schema_path = self._get_schema_path(table_name)
         
-        # Save schema
         if table_name in self._schemas:
             schemas_for_save = {}
             for field, field_type in self._schemas[table_name].items():
@@ -101,7 +99,6 @@ class FileDatabaseCSV(DatabaseInterface):
             with open(schema_path, 'w', encoding='utf-8') as f:
                 json.dump(schemas_for_save, f, ensure_ascii=False, indent=2)
         
-        # Save data
         if self._tables.get(table_name):
             fieldnames = list(self._tables[table_name][0].keys())
             with open(csv_path, 'w', encoding='utf-8', newline='') as f:
@@ -187,13 +184,25 @@ class FileDatabaseCSV(DatabaseInterface):
         if not self.table_exists(table_name):
             raise DatabaseError(f"Таблица '{table_name}' не существует")
         
+        schema = self._schemas[table_name]
+        
+        # Проверяем, что все обновляемые поля есть в схеме
+        for field in updates:
+            if field not in schema:
+                raise ValidationError(
+                    f"Поле '{field}' не существует в схеме таблицы '{table_name}'. "
+                    f"Допустимые поля: {', '.join(schema.keys())}"
+                )
+        
         for i, record in enumerate(self._tables[table_name]):
             if int(record["id"]) == record_id:
-                schema = self._schemas[table_name]
                 for field, value in updates.items():
                     if field in schema:
                         if not isinstance(value, schema[field]):
-                            raise ValidationError(f"Поле '{field}' должно быть {schema[field].__name__}")
+                            raise ValidationError(
+                                f"Поле '{field}' должно быть {schema[field].__name__}, "
+                                f"получен {type(value).__name__}"
+                            )
                 
                 self._tables[table_name][i].update(updates)
                 self._tables[table_name][i]["updated_at"] = datetime.now().isoformat()
@@ -241,6 +250,12 @@ class FileDatabaseCSV(DatabaseInterface):
     
     def sort(self, table_name: str, field: str, reverse: bool = False) -> List[Dict[str, Any]]:
         """Sort records by field."""
+        if not self.table_exists(table_name):
+            raise DatabaseError(f"Таблица '{table_name}' не существует")
+        
+        if field not in self._schemas.get(table_name, {}) and field != "id":
+            raise ValidationError(f"Поле '{field}' не существует для сортировки")
+        
         results = self.get_all(table_name)
         
         def get_sort_key(record):

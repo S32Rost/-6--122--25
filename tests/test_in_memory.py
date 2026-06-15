@@ -115,6 +115,10 @@ class TestInMemoryDatabase(unittest.TestCase):
         self.db.drop_table("students")
         self.assertFalse(self.db.table_exists("students"))
 
-
+    def test_update_with_unknown_field(self):
+        """Test update with unknown field should raise error."""
+        self.db.insert("students", name="Иван", age=20, major="Информатика", email="ivan@test.com")
+        with self.assertRaises(ValidationError):
+            self.db.update("students", 1, unknown_field="some_value")
 if __name__ == "__main__":
     unittest.main()

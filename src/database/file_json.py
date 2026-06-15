@@ -152,10 +152,23 @@ class FileDatabaseJSON(DatabaseInterface):
             raise RecordNotFoundError(f"Запись id={record_id} не найдена")
         
         schema = self._schemas[table_name]
+        
+        # Проверяем, что все обновляемые поля есть в схеме
+        for field in updates:
+            if field not in schema:
+                raise ValidationError(
+                    f"Поле '{field}' не существует в схеме таблицы '{table_name}'. "
+                    f"Допустимые поля: {', '.join(schema.keys())}"
+                )
+        
+        # Проверяем типы обновляемых полей
         for field, value in updates.items():
             if field in schema:
                 if not isinstance(value, schema[field]):
-                    raise ValidationError(f"Поле '{field}' должно быть {schema[field].__name__}")
+                    raise ValidationError(
+                        f"Поле '{field}' должно быть {schema[field].__name__}, "
+                        f"получен {type(value).__name__}"
+                    )
         
         self._data[table_name][str(record_id)].update(updates)
         self._data[table_name][str(record_id)]["updated_at"] = datetime.now().isoformat()
@@ -190,6 +203,12 @@ class FileDatabaseJSON(DatabaseInterface):
     
     def sort(self, table_name: str, field: str, reverse: bool = False) -> List[Dict[str, Any]]:
         """Sort records by field."""
+        if not self.table_exists(table_name):
+            raise DatabaseError(f"Таблица '{table_name}' не существует")
+        
+        if field not in self._schemas.get(table_name, {}) and field != "id":
+            raise ValidationError(f"Поле '{field}' не существует для сортировки")
+        
         results = self.get_all(table_name)
         
         def get_sort_key(record):
