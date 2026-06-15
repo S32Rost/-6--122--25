@@ -66,7 +66,6 @@ class FileDatabaseCSV(DatabaseInterface):
                 with open(csv_path, 'r', encoding='utf-8', newline='') as f:
                     reader = csv.DictReader(f)
                     for row in reader:
-                        # Convert types based on schema
                         if table_name in self._schemas:
                             for field, field_type in self._schemas[table_name].items():
                                 if field in row and row[field]:
@@ -77,7 +76,6 @@ class FileDatabaseCSV(DatabaseInterface):
                                             row[field] = float(row[field])
                                     except (ValueError, TypeError):
                                         pass
-                        # Convert id to int
                         if "id" in row:
                             row["id"] = int(row["id"])
                         self._tables[table_name].append(row)
@@ -101,22 +99,22 @@ class FileDatabaseCSV(DatabaseInterface):
             with open(schema_path, 'w', encoding='utf-8') as f:
                 json.dump(schemas_for_save, f, ensure_ascii=False, indent=2)
         
-        # Save data - if table is empty, create file with header only
-        if self._tables.get(table_name) and len(self._tables[table_name]) > 0:
+        # Determine fieldnames for header
+        if table_name in self._schemas:
+            fieldnames = list(self._schemas[table_name].keys())
+            if "id" not in fieldnames:
+                fieldnames = ["id", "created_at", "updated_at"] + fieldnames
+        elif self._tables.get(table_name) and len(self._tables[table_name]) > 0:
             fieldnames = list(self._tables[table_name][0].keys())
-            with open(csv_path, 'w', encoding='utf-8', newline='') as f:
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
-                writer.writeheader()
-                writer.writerows(self._tables[table_name])
         else:
-            # Table is empty - create file with header from schema
-            if table_name in self._schemas:
-                fieldnames = list(self._schemas[table_name].keys())
-                if "id" not in fieldnames:
-                    fieldnames = ["id", "created_at", "updated_at"] + fieldnames
-                with open(csv_path, 'w', encoding='utf-8', newline='') as f:
-                    writer = csv.DictWriter(f, fieldnames=fieldnames)
-                    writer.writeheader()
+            fieldnames = ["id", "created_at", "updated_at"]
+        
+        # Always rewrite file with header
+        with open(csv_path, 'w', encoding='utf-8', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            if self._tables.get(table_name) and len(self._tables[table_name]) > 0:
+                writer.writerows(self._tables[table_name])
     
     def create_table(self, table_name: str, schema: Dict[str, type]) -> None:
         """Create a new table."""
@@ -198,7 +196,6 @@ class FileDatabaseCSV(DatabaseInterface):
         
         schema = self._schemas[table_name]
         
-        # Check that all updated fields exist in schema
         for field in updates:
             if field not in schema:
                 raise ValidationError(
