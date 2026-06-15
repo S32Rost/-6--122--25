@@ -1,0 +1,320 @@
+"""Tests for validators - расширенные тесты."""
+
+import unittest
+from src.database.validators import (
+    validate_student_data,
+    validate_book_data,
+    validate_employee_data,
+    validate_record
+)
+from src.database.errors import ValidationError
+from src.database.schemas import SCHEMAS
+
+
+class TestValidators(unittest.TestCase):
+    """Complete validation tests."""
+    
+    # ========== Тесты для validate_student_data ==========
+    def test_valid_student_data(self):
+        try:
+            validate_student_data("Иван", 20, "Информатика", "ivan@test.com")
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_empty_name(self):
+        with self.assertRaises(ValidationError):
+            validate_student_data("", 20, "Информатика", "test@test.com")
+    
+    def test_whitespace_name(self):
+        with self.assertRaises(ValidationError):
+            validate_student_data("   ", 20, "Информатика", "test@test.com")
+    
+    def test_none_name(self):
+        with self.assertRaises(ValidationError):
+            validate_student_data(None, 20, "Информатика", "test@test.com")
+    
+    def test_name_too_long(self):
+        with self.assertRaises(ValidationError):
+            validate_student_data("A" * 101, 20, "Информатика", "test@test.com")
+    
+    def test_name_invalid_chars(self):
+        with self.assertRaises(ValidationError):
+            validate_student_data("Иван123", 20, "Информатика", "test@test.com")
+    
+    def test_name_valid_with_dash(self):
+        try:
+            validate_student_data("Иван-Петр", 20, "Информатика", "test@test.com")
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_name_valid_with_space(self):
+        try:
+            validate_student_data("Anna Maria", 20, "Информатика", "test@test.com")
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_age_too_low(self):
+        with self.assertRaises(ValidationError):
+            validate_student_data("Иван", 15, "Информатика", "test@test.com")
+    
+    def test_age_too_high(self):
+        with self.assertRaises(ValidationError):
+            validate_student_data("Иван", 121, "Информатика", "test@test.com")
+    
+    def test_age_boundary_min(self):
+        try:
+            validate_student_data("Иван", 16, "Информатика", "test@test.com")
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_age_boundary_max(self):
+        try:
+            validate_student_data("Иван", 120, "Информатика", "test@test.com")
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_negative_age(self):
+        with self.assertRaises(ValidationError):
+            validate_student_data("Иван", -5, "Информатика", "test@test.com")
+    
+    def test_age_string(self):
+        with self.assertRaises(ValidationError):
+            validate_student_data("Иван", "двадцать", "Информатика", "test@test.com")
+    
+    def test_empty_major(self):
+        with self.assertRaises(ValidationError):
+            validate_student_data("Иван", 20, "", "test@test.com")
+    
+    def test_whitespace_major(self):
+        with self.assertRaises(ValidationError):
+            validate_student_data("Иван", 20, "   ", "test@test.com")
+    
+    def test_major_too_long(self):
+        with self.assertRaises(ValidationError):
+            validate_student_data("Иван", 20, "A" * 101, "test@test.com")
+    
+    def test_invalid_email(self):
+        with self.assertRaises(ValidationError):
+            validate_student_data("Иван", 20, "Информатика", "invalid-email")
+    
+    def test_email_not_string(self):
+        with self.assertRaises(ValidationError):
+            validate_student_data("Иван", 20, "Информатика", 123)
+    
+    def test_valid_email_with_dot(self):
+        try:
+            validate_student_data("Иван", 20, "Информатика", "ivan.ivanov@test.com")
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_student_without_email(self):
+        """Email should be optional."""
+        try:
+            validate_student_data("Иван", 20, "Информатика")
+        except ValidationError:
+            self.fail("Email should be optional")
+    
+    # ========== Тесты для validate_book_data ==========
+    def test_valid_book_data(self):
+        try:
+            validate_book_data("Война и мир", "Толстой", 1869, "978-5-17-113922-7")
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_empty_title(self):
+        with self.assertRaises(ValidationError):
+            validate_book_data("", "Автор", 2020, "1234567890")
+    
+    def test_title_too_long(self):
+        with self.assertRaises(ValidationError):
+            validate_book_data("A" * 201, "Автор", 2020, "1234567890")
+    
+    def test_empty_author(self):
+        with self.assertRaises(ValidationError):
+            validate_book_data("Книга", "", 2020, "1234567890")
+    
+    def test_author_too_long(self):
+        with self.assertRaises(ValidationError):
+            validate_book_data("Книга", "A" * 101, 2020, "1234567890")
+    
+    def test_year_too_early(self):
+        with self.assertRaises(ValidationError):
+            validate_book_data("Книга", "Автор", 1400, "1234567890")
+    
+    def test_year_boundary_min(self):
+        try:
+            validate_book_data("Книга", "Автор", 1450, "1234567890")
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_year_string(self):
+        with self.assertRaises(ValidationError):
+            validate_book_data("Книга", "Автор", "1869", "1234567890")
+    
+    def test_invalid_isbn_length(self):
+        with self.assertRaises(ValidationError):
+            validate_book_data("Книга", "Автор", 2020, "123")
+    
+    def test_invalid_isbn_chars(self):
+        with self.assertRaises(ValidationError):
+            validate_book_data("Книга", "Автор", 2020, "abc")
+    
+    def test_valid_isbn_with_spaces(self):
+        try:
+            validate_book_data("Книга", "Автор", 2020, "978 5 17 113922 7")
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_valid_isbn_with_dashes(self):
+        try:
+            validate_book_data("Книга", "Автор", 2020, "978-5-17-113922-7")
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_book_without_isbn(self):
+        """ISBN should be optional."""
+        try:
+            validate_book_data("Книга", "Автор", 2020)
+        except ValidationError:
+            self.fail("ISBN should be optional")
+    
+    # ========== Тесты для validate_employee_data ==========
+    def test_valid_employee_data(self):
+        try:
+            validate_employee_data("Иван Иванов", "Программист", 100000.0, "IT")
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_empty_full_name(self):
+        with self.assertRaises(ValidationError):
+            validate_employee_data("", "Программист", 50000, "IT")
+    
+    def test_full_name_too_long(self):
+        with self.assertRaises(ValidationError):
+            validate_employee_data("A" * 151, "Программист", 50000, "IT")
+    
+    def test_empty_position(self):
+        with self.assertRaises(ValidationError):
+            validate_employee_data("Иван Иванов", "", 50000, "IT")
+    
+    def test_position_too_long(self):
+        with self.assertRaises(ValidationError):
+            validate_employee_data("Иван Иванов", "A" * 101, 50000, "IT")
+    
+    def test_negative_salary(self):
+        with self.assertRaises(ValidationError):
+            validate_employee_data("Иван Иванов", "Программист", -1000, "IT")
+    
+    def test_salary_too_high(self):
+        with self.assertRaises(ValidationError):
+            validate_employee_data("Иван Иванов", "Программист", 2_000_000, "IT")
+    
+    def test_salary_boundary_max(self):
+        try:
+            validate_employee_data("Иван Иванов", "Программист", 1_000_000, "IT")
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_salary_wrong_type(self):
+        with self.assertRaises(ValidationError):
+            validate_employee_data("Иван Иванов", "Программист", "много", "IT")
+    
+    def test_salary_int(self):
+        try:
+            validate_employee_data("Иван Иванов", "Программист", 100000, "IT")
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_salary_float(self):
+        try:
+            validate_employee_data("Иван Иванов", "Программист", 100000.50, "IT")
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_empty_department(self):
+        with self.assertRaises(ValidationError):
+            validate_employee_data("Иван Иванов", "Программист", 50000, "")
+    
+    # ========== Тесты для validate_record ==========
+    def test_validate_record_students_success(self):
+        schema = SCHEMAS["students"]
+        data = {"name": "Иван", "age": 20, "major": "Информатика", "email": "ivan@test.com"}
+        try:
+            validate_record(schema, data)
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_validate_record_books_success(self):
+        schema = SCHEMAS["books"]
+        data = {"title": "Война и мир", "author": "Толстой", "year": 1869, "isbn": "978-5-17-113922-7"}
+        try:
+            validate_record(schema, data)
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_validate_record_employees_success(self):
+        schema = SCHEMAS["employees"]
+        data = {"full_name": "Иван Иванов", "position": "Программист", "salary": 100000.0, "department": "IT"}
+        try:
+            validate_record(schema, data)
+        except ValidationError:
+            self.fail("ValidationError raised unexpectedly")
+    
+    def test_validate_record_missing_field(self):
+        schema = SCHEMAS["students"]
+        data = {"name": "Иван", "age": 20}
+        with self.assertRaises(ValidationError):
+            validate_record(schema, data)
+    
+    def test_validate_record_wrong_type(self):
+        schema = SCHEMAS["students"]
+        data = {"name": "Иван", "age": "двадцать", "major": "Информатика", "email": "test@test.com"}
+        with self.assertRaises(ValidationError):
+            validate_record(schema, data)
+    
+    def test_validate_record_extra_fields(self):
+        """Test that extra fields are rejected."""
+        schema = SCHEMAS["students"]
+        data = {
+            "name": "Иван",
+            "age": 20,
+            "major": "Информатика",
+            "email": "test@test.com",
+            "extra_field": "this_should_be_rejected"
+        }
+        with self.assertRaises(ValidationError) as context:
+            validate_record(schema, data)
+        self.assertIn("Лишнее поле", str(context.exception))
+    
+    def test_validate_record_no_extra_fields_allowed(self):
+        """Test that only schema fields are allowed."""
+        schema = SCHEMAS["students"]
+        data = {
+            "name": "Иван",
+            "age": 20,
+            "major": "Информатика",
+            "email": "test@test.com"
+        }
+        try:
+            validate_record(schema, data)
+        except ValidationError:
+            self.fail("Valid data should not raise ValidationError")
+    
+    def test_validate_record_extra_id_field(self):
+        """Test that 'id' field is allowed as it's auto-generated."""
+        schema = SCHEMAS["students"]
+        data = {
+            "id": 999,
+            "name": "Иван",
+            "age": 20,
+            "major": "Информатика",
+            "email": "test@test.com"
+        }
+        try:
+            validate_record(schema, data)
+        except ValidationError:
+            self.fail("'id' field should be allowed")
+
+
+if __name__ == "__main__":
+    unittest.main()
