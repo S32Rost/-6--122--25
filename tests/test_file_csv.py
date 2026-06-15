@@ -5,8 +5,7 @@ import tempfile
 import shutil
 from src.database.file_csv import FileDatabaseCSV
 from src.database.schemas import SCHEMAS
-from src.database.errors import RecordNotFoundError
-
+from src.database.errors import RecordNotFoundError, ValidationError, DatabaseError
 
 class TestFileDatabaseCSV(unittest.TestCase):
     """Test FileDatabaseCSV class."""
@@ -72,6 +71,29 @@ class TestFileDatabaseCSV(unittest.TestCase):
         names = [r["name"] for r in results]
         self.assertEqual(names, ["Анна", "Борис", "Иван"])
 
+    def test_insert_with_extra_field_rejected(self):
+        """Test insert with extra field should raise ValidationError."""
+        with self.assertRaises(ValidationError):
+            self.db.insert(
+                "students",
+                name="Иван",
+                age=20,
+                major="Информатика",
+                email="ivan@test.com",
+                extra_field="should_be_rejected"
+            )
+    
+    def test_update_with_extra_field_rejected(self):
+        """Test update with extra field should raise ValidationError."""
+        self.db.insert(
+            "students",
+            name="Иван",
+            age=20,
+            major="Информатика",
+            email="ivan@test.com"
+        )
+        with self.assertRaises(ValidationError):
+            self.db.update("students", 1, extra_field="should_be_rejected")
 
 if __name__ == "__main__":
     unittest.main()
