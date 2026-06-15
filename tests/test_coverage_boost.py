@@ -72,21 +72,6 @@ class TestCoverageBoost(unittest.TestCase):
         """Test employee salary as int."""
         validate_employee_data("Иван Иванов", "Программист", 100000, "IT")
     
-    def test_validate_record_extra_fields(self):
-        """Test validate_record with extra fields (should ignore)."""
-        schema = SCHEMAS["students"]
-        data = {
-            "name": "Иван",
-            "age": 20,
-            "major": "Информатика",
-            "email": "test@test.com",
-            "extra_field": "ignored"
-        }
-        try:
-            validate_record(schema, data)
-        except ValidationError:
-            self.fail("Extra fields should not cause validation error")
-    
     # ========== Для file_csv.py ==========
     
     def test_csv_load_empty_file(self):
@@ -105,7 +90,6 @@ class TestCoverageBoost(unittest.TestCase):
         db.insert("test", name="Bob", age=30)
         db.insert("test", name="Charlie", age=35)
         
-        # Ищем "li" — найдёт "Alice" и "Charlie" (Charlie содержит "li")
         results = db.filter("test", {"name__contains": "li"})
         self.assertEqual(len(results), 2)
         shutil.rmtree(temp_dir)

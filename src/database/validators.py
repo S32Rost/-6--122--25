@@ -2,10 +2,12 @@
 
 import re
 from datetime import datetime
-from typing import Any, Dict, Type
+from typing import Dict, Type, Any
 
 from src.database.errors import ValidationError
 
+
+# ========== Валидация для студентов ==========
 
 def validate_student_data(name: str, age: int, major: str, email: str = None) -> None:
     """Validate student data fields."""
@@ -42,6 +44,8 @@ def validate_student_data(name: str, age: int, major: str, email: str = None) ->
         if not re.match(email_pattern, email):
             raise ValidationError("Неверный формат email")
 
+
+# ========== Валидация для книг ==========
 
 def validate_book_data(title: str, author: str, year: int, isbn: str = None) -> None:
     """Validate book data fields."""
@@ -80,6 +84,8 @@ def validate_book_data(title: str, author: str, year: int, isbn: str = None) -> 
             raise ValidationError("ISBN должен содержать только цифры и дефисы")
 
 
+# ========== Валидация для сотрудников ==========
+
 def validate_employee_data(full_name: str, position: str, salary: float, department: str) -> None:
     """Validate employee data fields."""
     # ФИО
@@ -111,14 +117,23 @@ def validate_employee_data(full_name: str, position: str, salary: float, departm
         raise ValidationError("Отдел не может быть пустым")
 
 
+# ========== Основная функция валидации ==========
+
 def validate_record(schema: Dict[str, Type], data: Dict[str, Any]) -> None:
     """Validate record against schema with full validation."""
-    # Проверка наличия всех полей
+    # Проверка на лишние поля (которых нет в схеме)
+    for field in data:
+        if field not in schema and field not in ["id", "created_at", "updated_at"]:
+            raise ValidationError(
+                f"Лишнее поле '{field}' не входит в схему таблицы. "
+                f"Допустимые поля: {', '.join(schema.keys())}"
+            )
+    
+    # Проверка наличия всех обязательных полей и типов
     for field, field_type in schema.items():
         if field not in data:
-            raise ValidationError(f"Отсутствует поле: {field}")
+            raise ValidationError(f"Отсутствует обязательное поле: {field}")
         
-        # Проверка типа
         if not isinstance(data[field], field_type):
             raise ValidationError(
                 f"Поле '{field}' должно быть {field_type.__name__}, "
@@ -127,7 +142,6 @@ def validate_record(schema: Dict[str, Type], data: Dict[str, Any]) -> None:
     
     # Дополнительная валидация в зависимости от схемы
     if "name" in schema and "age" in schema and "major" in schema:
-        # Схема students
         validate_student_data(
             name=data.get("name"),
             age=data.get("age"),
@@ -135,7 +149,6 @@ def validate_record(schema: Dict[str, Type], data: Dict[str, Any]) -> None:
             email=data.get("email")
         )
     elif "title" in schema and "author" in schema and "year" in schema:
-        # Схема books
         validate_book_data(
             title=data.get("title"),
             author=data.get("author"),
@@ -143,7 +156,6 @@ def validate_record(schema: Dict[str, Type], data: Dict[str, Any]) -> None:
             isbn=data.get("isbn")
         )
     elif "full_name" in schema and "position" in schema and "salary" in schema:
-        # Схема employees
         validate_employee_data(
             full_name=data.get("full_name"),
             position=data.get("position"),
