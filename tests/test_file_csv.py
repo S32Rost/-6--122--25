@@ -1,7 +1,6 @@
 """Tests for CSV file-based database."""
 
 import unittest
-import os
 import tempfile
 import shutil
 from src.database.file_csv import FileDatabaseCSV

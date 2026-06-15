@@ -1,6 +1,5 @@
 """Console interface for the database."""
 
-import sys
 from src.database.in_memory import InMemoryDatabase
 from src.database.file_json import FileDatabaseJSON
 from src.database.file_csv import FileDatabaseCSV
@@ -221,7 +220,7 @@ class DatabaseCLI:
                         print("Использование: delete <id>")
                         continue
                     self.db.delete(self.current_table, int(parts[1]))
-                    print(f"✅ Запись удалена")
+                    print("✅ Запись удалена")
                 elif command == "filter":
                     if len(parts) < 2:
                         print("Использование: filter field=value или field__gt=value")
