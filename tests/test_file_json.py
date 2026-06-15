@@ -5,7 +5,7 @@ import os
 import tempfile
 from src.database.file_json import FileDatabaseJSON
 from src.database.schemas import SCHEMAS
-from src.database.errors import RecordNotFoundError, ValidationError, DatabaseError
+from src.database.errors import RecordNotFoundError, ValidationError
 
 
 class TestFileDatabaseJSON(unittest.TestCase):

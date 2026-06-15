@@ -5,7 +5,7 @@ import tempfile
 import shutil
 from src.database.file_csv import FileDatabaseCSV
 from src.database.schemas import SCHEMAS
-from src.database.errors import RecordNotFoundError, ValidationError, DatabaseError
+from src.database.errors import RecordNotFoundError, ValidationError
 
 class TestFileDatabaseCSV(unittest.TestCase):
     """Test FileDatabaseCSV class."""
