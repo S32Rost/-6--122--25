@@ -3,9 +3,11 @@
 import unittest
 import tempfile
 import shutil
+import os
 from src.database.file_csv import FileDatabaseCSV
 from src.database.schemas import SCHEMAS
 from src.database.errors import RecordNotFoundError, ValidationError
+
 
 class TestFileDatabaseCSV(unittest.TestCase):
     """Test FileDatabaseCSV class."""
@@ -27,7 +29,6 @@ class TestFileDatabaseCSV(unittest.TestCase):
         record = self.db.insert("students", name="Тест", age=20, major="Тест", email="test@test.com")
         self.assertEqual(record["name"], "Тест")
         
-        # Check persistence
         new_db = FileDatabaseCSV(self.temp_dir)
         loaded = new_db.get_by_id("students", 1)
         self.assertEqual(loaded["name"], "Тест")
@@ -70,7 +71,7 @@ class TestFileDatabaseCSV(unittest.TestCase):
         results = self.db.sort("students", "name", reverse=False)
         names = [r["name"] for r in results]
         self.assertEqual(names, ["Анна", "Борис", "Иван"])
-
+    
     def test_insert_with_extra_field_rejected(self):
         """Test insert with extra field should raise ValidationError."""
         with self.assertRaises(ValidationError):
@@ -94,6 +95,24 @@ class TestFileDatabaseCSV(unittest.TestCase):
         )
         with self.assertRaises(ValidationError):
             self.db.update("students", 1, extra_field="should_be_rejected")
+    
+    def test_delete_last_record_clears_file(self):
+        """Test that deleting last record clears the CSV file."""
+        self.db.create_table("test_delete", {"name": str})
+        self.db.insert("test_delete", name="Record1")
+        
+        csv_path = os.path.join(self.temp_dir, "test_delete.csv")
+        self.assertTrue(os.path.exists(csv_path))
+        
+        self.db.delete("test_delete", 1)
+        
+        records = self.db.get_all("test_delete")
+        self.assertEqual(len(records), 0)
+        
+        new_db = FileDatabaseCSV(self.temp_dir)
+        self.assertTrue(new_db.table_exists("test_delete"))
+        self.assertEqual(len(new_db.get_all("test_delete")), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

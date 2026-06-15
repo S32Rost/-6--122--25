@@ -66,6 +66,7 @@ class FileDatabaseCSV(DatabaseInterface):
                 with open(csv_path, 'r', encoding='utf-8', newline='') as f:
                     reader = csv.DictReader(f)
                     for row in reader:
+                        # Convert types based on schema
                         if table_name in self._schemas:
                             for field, field_type in self._schemas[table_name].items():
                                 if field in row and row[field]:
@@ -76,12 +77,12 @@ class FileDatabaseCSV(DatabaseInterface):
                                             row[field] = float(row[field])
                                     except (ValueError, TypeError):
                                         pass
+                        # Convert id to int
+                        if "id" in row:
+                            row["id"] = int(row["id"])
                         self._tables[table_name].append(row)
-                        try:
-                            if int(row.get("id", 0)) > max_id:
-                                max_id = int(row["id"])
-                        except (ValueError, TypeError):
-                            pass
+                        if row.get("id", 0) > max_id:
+                            max_id = row["id"]
             except Exception as e:
                 raise DatabaseError(f"Ошибка загрузки CSV {table_name}: {e}")
         
@@ -92,6 +93,7 @@ class FileDatabaseCSV(DatabaseInterface):
         csv_path = self._get_table_path(table_name)
         schema_path = self._get_schema_path(table_name)
         
+        # Save schema
         if table_name in self._schemas:
             schemas_for_save = {}
             for field, field_type in self._schemas[table_name].items():
@@ -99,12 +101,22 @@ class FileDatabaseCSV(DatabaseInterface):
             with open(schema_path, 'w', encoding='utf-8') as f:
                 json.dump(schemas_for_save, f, ensure_ascii=False, indent=2)
         
-        if self._tables.get(table_name):
+        # Save data - if table is empty, create file with header only
+        if self._tables.get(table_name) and len(self._tables[table_name]) > 0:
             fieldnames = list(self._tables[table_name][0].keys())
             with open(csv_path, 'w', encoding='utf-8', newline='') as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 writer.writerows(self._tables[table_name])
+        else:
+            # Table is empty - create file with header from schema
+            if table_name in self._schemas:
+                fieldnames = list(self._schemas[table_name].keys())
+                if "id" not in fieldnames:
+                    fieldnames = ["id", "created_at", "updated_at"] + fieldnames
+                with open(csv_path, 'w', encoding='utf-8', newline='') as f:
+                    writer = csv.DictWriter(f, fieldnames=fieldnames)
+                    writer.writeheader()
     
     def create_table(self, table_name: str, schema: Dict[str, type]) -> None:
         """Create a new table."""
@@ -125,7 +137,7 @@ class FileDatabaseCSV(DatabaseInterface):
         
         record_id = self._next_ids[table_name]
         record = {
-            "id": str(record_id),
+            "id": record_id,
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
             **kwargs
@@ -141,7 +153,7 @@ class FileDatabaseCSV(DatabaseInterface):
         if not self.table_exists(table_name):
             raise DatabaseError(f"Таблица '{table_name}' не существует")
         for record in self._tables[table_name]:
-            if int(record["id"]) == record_id:
+            if record["id"] == record_id:
                 return record
         raise RecordNotFoundError(f"Запись id={record_id} не найдена")
     
@@ -167,9 +179,9 @@ class FileDatabaseCSV(DatabaseInterface):
             if operator == "eq":
                 results = [r for r in results if r.get(field) == filter_value]
             elif operator == "gt":
-                results = [r for r in results if int(r.get(field, 0)) > filter_value]
+                results = [r for r in results if r.get(field, 0) > filter_value]
             elif operator == "lt":
-                results = [r for r in results if int(r.get(field, 0)) < filter_value]
+                results = [r for r in results if r.get(field, 0) < filter_value]
             elif operator == "contains":
                 results = [r for r in results if filter_value.lower() in str(r.get(field, "")).lower()]
             elif operator == "startswith":
@@ -186,7 +198,7 @@ class FileDatabaseCSV(DatabaseInterface):
         
         schema = self._schemas[table_name]
         
-        # Проверяем, что все обновляемые поля есть в схеме
+        # Check that all updated fields exist in schema
         for field in updates:
             if field not in schema:
                 raise ValidationError(
@@ -195,7 +207,7 @@ class FileDatabaseCSV(DatabaseInterface):
                 )
         
         for i, record in enumerate(self._tables[table_name]):
-            if int(record["id"]) == record_id:
+            if record["id"] == record_id:
                 for field, value in updates.items():
                     if field in schema:
                         if not isinstance(value, schema[field]):
@@ -217,7 +229,7 @@ class FileDatabaseCSV(DatabaseInterface):
             raise DatabaseError(f"Таблица '{table_name}' не существует")
         
         for i, record in enumerate(self._tables[table_name]):
-            if int(record["id"]) == record_id:
+            if record["id"] == record_id:
                 del self._tables[table_name][i]
                 self._save_table(table_name)
                 return

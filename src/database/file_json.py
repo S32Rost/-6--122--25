@@ -44,10 +44,8 @@ class FileDatabaseJSON(DatabaseInterface):
                                 self._schemas[table_name][field] = int
                             elif type_str == "float":
                                 self._schemas[table_name][field] = float
-            except json.JSONDecodeError:
-                self._data = {}
-                self._next_ids = {}
-                self._schemas = {}
+            except json.JSONDecodeError as e:
+                raise DatabaseError(f"Ошибка парсинга JSON файла {self.filepath}: файл повреждён. {e}")
             except Exception as e:
                 raise DatabaseError(f"Ошибка загрузки файла {self.filepath}: {e}")
     

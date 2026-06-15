@@ -120,5 +120,31 @@ class TestInMemoryDatabase(unittest.TestCase):
         self.db.insert("students", name="Иван", age=20, major="Информатика", email="ivan@test.com")
         with self.assertRaises(ValidationError):
             self.db.update("students", 1, unknown_field="some_value")
+
+    def test_insert_with_extra_field_rejected(self):
+        """Test insert with extra field should raise ValidationError."""
+        with self.assertRaises(ValidationError) as context:
+            self.db.insert(
+                "students",
+                name="Иван",
+                age=20,
+                major="Информатика",
+                email="ivan@test.com",
+                extra_field="should_be_rejected"
+            )
+        self.assertIn("Лишнее поле", str(context.exception))
+    
+    def test_update_with_extra_field_rejected(self):
+        """Test update with extra field should raise ValidationError."""
+        self.db.insert(
+            "students",
+            name="Иван",
+            age=20,
+            major="Информатика",
+            email="ivan@test.com"
+        )
+        with self.assertRaises(ValidationError) as context:
+            self.db.update("students", 1, extra_field="should_be_rejected")
+        self.assertIn("не существует в схеме", str(context.exception))
 if __name__ == "__main__":
     unittest.main()
