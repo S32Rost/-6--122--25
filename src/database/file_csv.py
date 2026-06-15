@@ -71,9 +71,9 @@ class FileDatabaseCSV(DatabaseInterface):
                             for field, field_type in self._schemas[table_name].items():
                                 if field in row and row[field]:
                                     try:
-                                        if field_type == int:
+                                        if field_type is int:
                                             row[field] = int(row[field])
-                                        elif field_type == float:
+                                        elif field_type is float:
                                             row[field] = float(row[field])
                                     except (ValueError, TypeError):
                                         pass
