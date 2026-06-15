@@ -5,8 +5,7 @@ import os
 import tempfile
 from src.database.file_json import FileDatabaseJSON
 from src.database.schemas import SCHEMAS
-from src.database.errors import RecordNotFoundError, ValidationError
-
+from src.database.errors import RecordNotFoundError, ValidationError, DatabaseError
 
 class TestFileDatabaseJSON(unittest.TestCase):
     """Test FileDatabaseJSON class."""
@@ -97,6 +96,22 @@ class TestFileDatabaseJSON(unittest.TestCase):
         )
         with self.assertRaises(ValidationError):
             self.db.update("students", 1, extra_field="should_be_rejected")
+
+    def test_corrupted_json_file_raises_error(self):
+        """Test that corrupted JSON file raises DatabaseError."""
+        temp_file = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
+        temp_name = temp_file.name
+        temp_file.close()
+        
+        # Записываем некорректный JSON
+        with open(temp_name, 'w', encoding='utf-8') as f:
+            f.write("this is not valid json {")
+        
+        with self.assertRaises(DatabaseError) as context:
+            FileDatabaseJSON(temp_name)
+        
+        self.assertIn("повреждён", str(context.exception))
+        os.unlink(temp_name)
 
 if __name__ == "__main__":
     unittest.main()
